@@ -17,9 +17,20 @@ for dirpath, dirnames, filenames in os.walk(folder_path): #all sub folders
         if file_path_exists:
             
             print(file_path)
+
+            # identifier care
+            
             identifier = df.loc[df["path"] == file_path, "Id"].values[0]
             identifier = str(int(identifier))
-            new_file_path = os.path.join(new_folder_path, identifier + '.wav')
+            
+            # label constructor
+
+            action = df.loc[df["path"] == file_path, "action"].values[0]
+            object = df.loc[df["path"] == file_path, "object"].values[0]
+            label  = action + object
+
+
+            new_file_path = os.path.join(new_folder_path, identifier + "_" + label + '.wav')
 
             shutil.copy(file_path, new_file_path)
 
