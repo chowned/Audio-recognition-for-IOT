@@ -13,9 +13,29 @@ random.seed(seed)
 tf.random.set_seed(seed)
 np.random.seed(seed)
 
-train_ds = tf.data.Dataset.list_files(['msc-train/go*', 'msc-train/stop*'])
-val_ds = tf.data.Dataset.list_files(['msc-val/go*', 'msc-val/stop*'])
-test_ds = tf.data.Dataset.list_files(['msc-test/go*', 'msc-test/stop*'])
+train_ds_location = './Train_Dataset/'
+eval_ds_location  = './Test_Dataset/'
+
+# using Train_Dataset for both training and dataset
+# Content of Test_Dataset will then be used to evaluate final accuracy
+file_paths = []
+
+for filename in os.listdir(train_ds_location):
+    file_path = os.path.join(train_ds_location, filename)
+    file_paths.append(file_path)
+random.shuffle(file_paths)
+test_percentage = 0.2
+num_test_files = int(len(file_paths) * test_percentage)
+
+train_paths = file_paths[num_test_files:] # it is shuffled, so i can do this
+test_paths = file_paths[:num_test_files]
+
+#end
+
+
+train_ds = tf.data.Dataset.list_files(train_paths)
+val_ds = tf.data.Dataset.list_files(eval_ds_location)
+test_ds = tf.data.Dataset.list_files(test_paths)
 
 batch_size = pr.TRAINING_ARGS['batch_size']
 epochs = pr.TRAINING_ARGS['epochs']
@@ -29,14 +49,14 @@ for example_batch, example_labels in train_ds.take(1):
   print('Data Shape:', example_batch.shape[1:])
   print('Labels:', example_labels)
 
-  model = tf.keras.Sequential([
+model = tf.keras.Sequential([
     tf.keras.layers.Input(shape=example_batch.shape[1:]),
     tf.keras.layers.Conv2D(filters=int(128 * pr.alpha), kernel_size=[3, 3], strides=[2, 2],
         use_bias=False, padding='valid'),
     tf.keras.layers.BatchNormalization(),
     tf.keras.layers.ReLU(),
     tf.keras.layers.Conv2D(filters=int(128 * pr.alpha), kernel_size=[3, 3], strides=[1, 1],
-        use_bias=False, padding='same'),
+            use_bias=False, padding='same'),
     tf.keras.layers.BatchNormalization(),
     tf.keras.layers.ReLU(),
     tf.keras.layers.Conv2D(filters=int(128 * pr.alpha), kernel_size=[3, 3], strides=[1, 1],
