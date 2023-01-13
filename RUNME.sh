@@ -32,9 +32,9 @@ fi
 # echo "Step 3 : Running the dataset preparation steps"
 if [[ $steps == *3* ]];then
     echo "Step 3 : Running the dataset preparation steps"
-    python3 ./1_Preparing_Dataset_Train.py
-    python3 ./2_Preparing_Dataset_Evaluation.py
     python3 ./3_Preparing_Label_Set.py
+    python3 ./2_Preparing_Dataset_Evaluation.py
+    python3 ./1_Preparing_Dataset_Train.py
 fi
 
 # python3 ./4_Model_Training.py

@@ -1,8 +1,8 @@
 import tensorflow as tf
 import tensorflow_io as tfio
 import numpy as np
-
 LABELS = ['change languagenone', 'activatemusic', 'deactivatelights', 'increasevolume', 'decreasevolume', 'increaseheat', 'decreaseheat', 'nannan']
+# This is the file genarated that has the Labels that i must use for training
 # This is the file genarated that has the Labels that i must use for training
  
 frame_length_in_s = 0.032
@@ -62,17 +62,17 @@ def preprocess(filename):
     true_label = file_parts[0]
     label_id = tf.argmax(true_label == LABELS)
 
+    audio, sampling_rate = tf.audio.decode_wav(audio_binary)
+
+    audio = tf.squeeze(audio, axis=-1) #all our audio are mono, drop extra axis
+
+    # print("Audio",tf.shape(audio))
+
+    
+    
     
 
-
-
-    
-
-    audio_length = tf.shape(audio)[0]
-    desired_length = 20 * sampling_rate
-    padding_length = desired_length - audio_length
-    paddings = tf.constant([[0, padding_length]])
-    audio_padded = tf.pad(audio, paddings)
+    audio_padded = audio
 
     stft = tf.signal.stft(
         audio_padded,

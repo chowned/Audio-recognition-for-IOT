@@ -18,7 +18,7 @@ objects = os.listdir(folder_path)
 import os
 import wave
 
-directory = './Train_Dataset/'
+directory = './Train_Dataset_Truncated/'
 
 max_duration = 0
 max_filename = ''
