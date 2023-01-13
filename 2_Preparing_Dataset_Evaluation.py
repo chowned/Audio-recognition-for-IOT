@@ -38,7 +38,7 @@ for dirpath, dirnames, filenames in os.walk(folder_path): #all sub folders
             target_length = 4 * 16000
             y_truncated = librosa.util.fix_length(data=y_truncated, size=target_length) #padding
 
-            sf.write(new_file_path, y_truncated, new_sr, 'PCM_24')
+            sf.write(new_file_path, y_truncated, new_sr, 'PCM_16')
 
             # shutil.copy(file_path, new_file_path)
 

@@ -45,13 +45,13 @@ for dirpath, dirnames, filenames in os.walk(folder_path): #all sub folders
 
             y_truncated = y_truncated[:int(4*new_sr)]
 
-            target_length = 4 * 16000
+            target_length = 4 * new_sr
             y_truncated = librosa.util.fix_length(data=y_truncated, size=target_length) #padding
 
             # y_truncated, sr = librosa.load(y_truncated, sr=sr, duration=4.0)
             # Save truncated audio
             # librosa.output.write_wav(new_file_path, y_truncated, sr)
-            sf.write(new_file_path, y_truncated, new_sr, 'PCM_24')
+            sf.write(new_file_path, y_truncated, new_sr, 'PCM_16')
 
 
             # shutil.copy(file_path, new_file_path)

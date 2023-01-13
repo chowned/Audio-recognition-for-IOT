@@ -17,14 +17,14 @@ PREPROCESSING_ARGS = {
 
 TRAINING_ARGS = {
     'batch_size': 32,
-    'initial_learning_rate': 0.015,
+    'initial_learning_rate': 0.03,
     'end_learning_rate': 0.001, #1.e-9,
     'epochs': 70
 }
 
 
 final_sparsity = 0.01
-alpha=0.01
+alpha=1
 
 num_mel_bins = (int) ((16000 - 16000 * PREPROCESSING_ARGS['frame_length_in_s'])/(16000*PREPROCESSING_ARGS['frame_step_in_s']))+1
 print(num_mel_bins)
@@ -75,7 +75,7 @@ def preprocess(filename):
     audio_padded = audio
 
     stft = tf.signal.stft(
-        audio_padded,
+        audio,
         frame_length=frame_length,
         frame_step=frame_step,
         fft_length=frame_length

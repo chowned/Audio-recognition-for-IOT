@@ -13,8 +13,8 @@ random.seed(seed)
 tf.random.set_seed(seed)
 np.random.seed(seed)
 
-train_ds_location = './Train_Dataset/'
-eval_ds_location  = './Test_Dataset/'
+train_ds_location = './Train_Dataset_Truncated/'
+eval_ds_location  = './Test_Dataset_Truncated/'
 
 # using Train_Dataset for both training and dataset
 # Content of Test_Dataset will then be used to evaluate final accuracy
@@ -102,7 +102,7 @@ metrics = [tf.metrics.SparseCategoricalAccuracy()]
 callbacks = [tfmot.sparsity.keras.UpdatePruningStep()]
 model_for_pruning.compile(loss=loss, optimizer=optimizer, metrics=metrics)
 
-history = model_for_pruning.fit(train_ds, epochs=epochs, validation_data=val_ds,callbacks=callbacks)
+history = model_for_pruning.fit(train_ds, epochs=epochs, validation_data=test_ds,callbacks=callbacks) #it was valds
 
 test_loss, test_accuracy = model_for_pruning.evaluate(test_ds)
 
