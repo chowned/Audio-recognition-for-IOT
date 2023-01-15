@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-df = pd.read_csv('./dsl_data/development.csv')
+df = pd.read_csv('../../datasets/dsl_data/development.csv', sep=',')
 
 df['labels'] = df['action'].astype(str) + df['object'].astype(str)
 

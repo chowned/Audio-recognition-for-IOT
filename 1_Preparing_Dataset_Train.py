@@ -9,10 +9,10 @@ from concurrent.futures import ThreadPoolExecutor
 # df = pd.read_csv('./dsl_data/development.csv')
 # new_folder_path = './Train_Dataset_Truncated/'
 
-df = pd.read_csv('../datasets/dsl_data/development.csv', sep=',')
-new_folder_path = '../datasets/dsl_data/Train_Dataset_Truncated/'
+df = pd.read_csv('../../datasets/dsl_data/development.csv', sep=',')
+new_folder_path = '../../datasets/dsl_data/Train_Dataset_Truncated/'
 
-folder_path = './dsl_data/'
+folder_path = '../../datasets/dsl_data/'
 
 ###############
 def process_file(file_path):
@@ -25,7 +25,7 @@ def process_file(file_path):
 
         identifier = df.loc[df["path"] == file_path, "Id"].values[0]
         identifier = str(int(identifier))
-        print("\n "+identifier)
+        # print("\n "+identifier)
 
         # label constructor
 
@@ -111,6 +111,9 @@ with ThreadPoolExecutor(max_workers=4) as executor: #multi-threaded beast :)
     for dirpath, dirnames, filenames in os.walk(folder_path):
         dirpath = dirpath.replace("\\", "/")
         dirpath = dirpath[dirpath.index("/")+1:]
+        dirpath = dirpath[dirpath.index("/")+1:]
+        dirpath = dirpath[dirpath.index("/")+1:]
+        # print(dirpath)
         for filename in filenames:
             file_path = os.path.join(dirpath, filename)
             file_path = file_path.replace("\\", "/")
