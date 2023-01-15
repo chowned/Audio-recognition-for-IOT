@@ -25,6 +25,7 @@ def process_file(file_path):
 
         identifier = df.loc[df["path"] == file_path, "Id"].values[0]
         identifier = str(int(identifier))
+        print("\n "+identifier)
 
         # label constructor
 
@@ -106,7 +107,7 @@ if not os.path.isdir(new_folder_path):
 
 #             # shutil.copy(file_path, new_file_path)
 
-with ThreadPoolExecutor() as executor: #multi-threaded beast :)
+with ThreadPoolExecutor(max_workers=4) as executor: #multi-threaded beast :)
     for dirpath, dirnames, filenames in os.walk(folder_path):
         dirpath = dirpath.replace("\\", "/")
         dirpath = dirpath[dirpath.index("/")+1:]
