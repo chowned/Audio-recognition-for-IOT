@@ -1,13 +1,13 @@
 import pandas as pd
 import numpy as np
 
-df = pd.read_csv('../datasets/dsl_data/development.csv')
+df = pd.read_csv('./dsl_data/development.csv')
 
 df['labels'] = df['action'].astype(str) + df['object'].astype(str)
 
 distinct_values = df['labels'].unique()
 
-print(distinct_values)
+# print(distinct_values)
 
 result = 'LABELS = ['
 for value in distinct_values:
