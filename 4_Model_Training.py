@@ -4,7 +4,7 @@ import numpy as np
 import random
 import tensorflow_io as tfio
 import preprocessing as pr
-
+from tensorflow import keras
 
 seed = 42
 os.environ['PYTHONHASHSEED'] = str(seed)
@@ -13,9 +13,39 @@ random.seed(seed)
 tf.random.set_seed(seed)
 np.random.seed(seed)
 
-train_ds = tf.data.Dataset.list_files(['msc-train/go*', 'msc-train/stop*'])
-val_ds = tf.data.Dataset.list_files(['msc-val/go*', 'msc-val/stop*'])
-test_ds = tf.data.Dataset.list_files(['msc-test/go*', 'msc-test/stop*'])
+train_ds_location = './Train_Dataset_Truncated/'
+eval_ds_location  = './Test_Dataset_Truncated/'
+
+# train_ds_location   = '../datasets/dsl_data/Train_Dataset_Truncated/'
+# eval_ds_location    = '../datasets/dsl_data/Test_Dataset_Truncated/'
+
+log_dir_tensorboard = '../datasets/dsl_data/tensorboard_data/'
+log_dir_model       = './models/'
+
+runs = [int(d.split('_')[-1]) for d in os.listdir(log_dir_tensorboard) if 'run_' in d]
+tb_run = max(runs) + 1 if runs else 0
+
+
+# using Train_Dataset for both training and dataset
+# Content of Test_Dataset will then be used to evaluate final accuracy
+file_paths = []
+
+for filename in os.listdir(train_ds_location):
+    file_path = os.path.join(train_ds_location, filename)
+    file_paths.append(file_path)
+random.shuffle(file_paths)
+test_percentage = 0.2
+num_test_files = int(len(file_paths) * test_percentage)
+
+train_paths = file_paths[num_test_files:] # it is shuffled, so i can do this
+test_paths = file_paths[:num_test_files]
+
+#end
+
+
+train_ds = tf.data.Dataset.list_files(train_paths)
+val_ds = tf.data.Dataset.list_files(eval_ds_location)
+test_ds = tf.data.Dataset.list_files(test_paths)
 
 batch_size = pr.TRAINING_ARGS['batch_size']
 epochs = pr.TRAINING_ARGS['epochs']
@@ -29,14 +59,19 @@ for example_batch, example_labels in train_ds.take(1):
   print('Data Shape:', example_batch.shape[1:])
   print('Labels:', example_labels)
 
-  model = tf.keras.Sequential([
+model_name   = 'model_'+str(batch_size)+'_'+str(pr.alpha)+'.h5'
+if os.path.exists(log_dir_model+model_name):
+    model = tf.keras.models.load_model(log_dir_model+model_name)
+    # Continue using loaded_model as usual
+else:
+    model = tf.keras.Sequential([
     tf.keras.layers.Input(shape=example_batch.shape[1:]),
     tf.keras.layers.Conv2D(filters=int(128 * pr.alpha), kernel_size=[3, 3], strides=[2, 2],
         use_bias=False, padding='valid'),
     tf.keras.layers.BatchNormalization(),
     tf.keras.layers.ReLU(),
     tf.keras.layers.Conv2D(filters=int(128 * pr.alpha), kernel_size=[3, 3], strides=[1, 1],
-        use_bias=False, padding='same'),
+            use_bias=False, padding='same'),
     tf.keras.layers.BatchNormalization(),
     tf.keras.layers.ReLU(),
     tf.keras.layers.Conv2D(filters=int(128 * pr.alpha), kernel_size=[3, 3], strides=[1, 1],
@@ -46,7 +81,10 @@ for example_batch, example_labels in train_ds.take(1):
     tf.keras.layers.GlobalAveragePooling2D(),
     tf.keras.layers.Dense(units=len(pr.LABELS)),
     tf.keras.layers.Softmax()
-])
+    ])
+
+
+
 
 import tensorflow_model_optimization as tfmot
 
@@ -79,10 +117,22 @@ linear_decay = tf.keras.optimizers.schedules.PolynomialDecay(
 )
 optimizer = tf.optimizers.Adam(learning_rate=linear_decay)
 metrics = [tf.metrics.SparseCategoricalAccuracy()]
-callbacks = [tfmot.sparsity.keras.UpdatePruningStep()]
+
+# callbacks = [tfmot.sparsity.keras.UpdatePruningStep()]
+callbacks = [ tf.keras.callbacks.ModelCheckpoint(
+    filepath=log_dir_model+model_name, 
+    save_best_only=True, 
+    save_weights_only=False, 
+    monitor='val_loss', 
+    mode='min', 
+    save_freq='epoch'),tfmot.sparsity.keras.UpdatePruningStep(), keras.callbacks.TensorBoard(log_dir=log_dir_tensorboard+'run_{}'.format(tb_run), histogram_freq=1)]
+
+
 model_for_pruning.compile(loss=loss, optimizer=optimizer, metrics=metrics)
 
-history = model_for_pruning.fit(train_ds, epochs=epochs, validation_data=val_ds,callbacks=callbacks)
+history = model_for_pruning.fit(train_ds, epochs=epochs, validation_data=test_ds,callbacks=callbacks) #it was valds
+# history = model_for_pruning.fit(train_ds, epochs=epochs, callbacks=callbacks) #it was valds
+
 
 test_loss, test_accuracy = model_for_pruning.evaluate(test_ds)
 

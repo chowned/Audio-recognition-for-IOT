@@ -1,6 +1,6 @@
 import tensorflow as tf
 import tensorflow_io as tfio
-
+import numpy as np
 LABELS = ['change languagenone', 'activatemusic', 'deactivatelights', 'increasevolume', 'decreasevolume', 'increaseheat', 'decreaseheat', 'nannan']
 # This is the file genarated that has the Labels that i must use for training
  
@@ -16,14 +16,14 @@ PREPROCESSING_ARGS = {
 
 TRAINING_ARGS = {
     'batch_size': 32,
-    'initial_learning_rate': 0.015,
+    'initial_learning_rate': 0.03,
     'end_learning_rate': 0.001, #1.e-9,
-    'epochs': 70
+    'epochs': 1
 }
 
 
-final_sparsity = 0.5
-alpha=0.14
+final_sparsity = 0.01
+alpha=1
 
 num_mel_bins = (int) ((16000 - 16000 * PREPROCESSING_ARGS['frame_length_in_s'])/(16000*PREPROCESSING_ARGS['frame_step_in_s']))+1
 print(num_mel_bins)
@@ -53,23 +53,28 @@ linear_to_mel_weight_matrix = tf.signal.linear_to_mel_weight_matrix(
 )
 
 def preprocess(filename):
-    
     audio_binary = tf.io.read_file(filename)
 
-    path_parts = tf.strings.split(filename, '/')
+    path_parts = tf.strings.split(filename, '_')
     path_end = path_parts[-1]
-    file_parts = tf.strings.split(path_end, '_')
+    file_parts = tf.strings.split(path_end, '.')
     true_label = file_parts[0]
     label_id = tf.argmax(true_label == LABELS)
 
     audio, sampling_rate = tf.audio.decode_wav(audio_binary)
-    audio = tf.squeeze(audio)
 
-    zero_padding = tf.zeros(sampling_rate - tf.shape(audio), dtype=tf.float32)
-    audio_padded = tf.concat([audio, zero_padding], axis=0)
+    audio = tf.squeeze(audio, axis=-1) #all our audio are mono, drop extra axis
+
+    # print("Audio",tf.shape(audio))
+
+    
+    
+    
+
+    audio_padded = audio
 
     stft = tf.signal.stft(
-        audio_padded,
+        audio,
         frame_length=frame_length,
         frame_step=frame_step,
         fft_length=frame_length
