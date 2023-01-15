@@ -5,6 +5,7 @@ import random
 import tensorflow_io as tfio
 import preprocessing as pr
 from tensorflow import keras
+import tensorflow_model_optimization as tfmot
 import argparse as ap
 
 parser = ap.ArgumentParser()
@@ -27,14 +28,14 @@ random.seed(seed)
 tf.random.set_seed(seed)
 np.random.seed(seed)
 
-train_ds_location = './Train_Dataset_Truncated/'
-eval_ds_location  = './Test_Dataset_Truncated/'
+# train_ds_location = './Train_Dataset_Truncated/'
+# eval_ds_location  = './Test_Dataset_Truncated/'
 
-# train_ds_location   = '../datasets/dsl_data/Train_Dataset_Truncated/'
-# eval_ds_location    = '../datasets/dsl_data/Test_Dataset_Truncated/'
+train_ds_location   = '../../datasets/dsl_data/Train_Dataset_Truncated/'
+eval_ds_location    = '../../datasets/dsl_data/Test_Dataset_Truncated/'
 
-log_dir_tensorboard = '../datasets/dsl_data/tensorboard_data/'
-log_dir_model       = './models/'
+log_dir_tensorboard = '../../datasets/dsl_data/tensorboard_data/'
+log_dir_model       = '../../datasets/dsl_data/models/'
 
 runs = [int(d.split('_')[-1]) for d in os.listdir(log_dir_tensorboard) if 'run_' in d]
 tb_run = max(runs) + 1 if runs else 0
@@ -54,9 +55,6 @@ num_test_files = int(len(file_paths) * args.test_percentage)
 train_paths = file_paths[num_test_files:] # it is shuffled, so i can do this
 test_paths = file_paths[:num_test_files]
 
-#end
-
-
 train_ds = tf.data.Dataset.list_files(train_paths)
 val_ds = tf.data.Dataset.list_files(eval_ds_location)
 test_ds = tf.data.Dataset.list_files(test_paths)
@@ -73,12 +71,43 @@ for example_batch, example_labels in train_ds.take(1):
   print('Data Shape:', example_batch.shape[1:])
   print('Labels:', example_labels)
 
-model_name   = 'model_'+str(arg.batch_size)+'_'+str(args.alpha)+'.h5'
-if os.path.exists(log_dir_model+model_name):
-    model = tf.keras.models.load_model(log_dir_model+model_name)
-    # Continue using loaded_model as usual
-else:
-    model = tf.keras.Sequential([
+prune_low_magnitude = tfmot.sparsity.keras.prune_low_magnitude
+begin_step = int(len(train_ds) * args.epochs * args.pruning_initial_step)
+end_step = int(len(train_ds) * args.epochs)
+pruning_params = {
+    'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(
+        initial_sparsity=args.initial_sparsity,
+        final_sparsity=pr.final_sparsity,
+        begin_step=begin_step,
+        end_step=end_step
+    )
+}
+custom_objects = {'PruneLowMagnitude': prune_low_magnitude}
+
+model_name   = 'model_'+str(args.batch_size)+'_'+str(args.alpha)+'.h5'
+# if os.path.exists(log_dir_model+model_name):
+#     model = tf.keras.models.load_model(log_dir_model+model_name, custom_objects=custom_objects)
+#     # Continue using loaded_model as usual
+# else:
+#     model = tf.keras.Sequential([
+#     tf.keras.layers.Input(shape=example_batch.shape[1:]),
+#     tf.keras.layers.Conv2D(filters=int(128 * pr.alpha), kernel_size=[3, 3], strides=[2, 2],
+#         use_bias=False, padding='valid'),
+#     tf.keras.layers.BatchNormalization(),
+#     tf.keras.layers.ReLU(),
+#     tf.keras.layers.Conv2D(filters=int(128 * pr.alpha), kernel_size=[3, 3], strides=[1, 1],
+#             use_bias=False, padding='same'),
+#     tf.keras.layers.BatchNormalization(),
+#     tf.keras.layers.ReLU(),
+#     tf.keras.layers.Conv2D(filters=int(128 * pr.alpha), kernel_size=[3, 3], strides=[1, 1],
+#         use_bias=False, padding='same'),
+#     tf.keras.layers.BatchNormalization(),
+#     tf.keras.layers.ReLU(),
+#     tf.keras.layers.GlobalAveragePooling2D(),
+#     tf.keras.layers.Dense(units=len(pr.LABELS)),
+#     tf.keras.layers.Softmax()
+#     ])
+model = tf.keras.Sequential([
     tf.keras.layers.Input(shape=example_batch.shape[1:]),
     tf.keras.layers.Conv2D(filters=int(128 * args.alpha), kernel_size=[3, 3], strides=[2, 2],
         use_bias=False, padding='valid'),
@@ -97,24 +126,6 @@ else:
     tf.keras.layers.Softmax()
     ])
 
-
-
-
-import tensorflow_model_optimization as tfmot
-
-prune_low_magnitude = tfmot.sparsity.keras.prune_low_magnitude
-
-begin_step = int(len(train_ds) * args.epochs * ags.pruning_initial_step)
-end_step = int(len(train_ds) * args.epochs)
-
-pruning_params = {
-    'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(
-        initial_sparsity=args.initial_sparsity,
-        final_sparsity=pr.final_sparsity,
-        begin_step=begin_step,
-        end_step=end_step
-    )
-}
 
 model_for_pruning = prune_low_magnitude(model, **pruning_params)
 
