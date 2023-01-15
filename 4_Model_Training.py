@@ -5,6 +5,19 @@ import random
 import tensorflow_io as tfio
 import preprocessing as pr
 from tensorflow import keras
+import argparse as ap
+
+parser = ap.ArgumentParser()
+
+parser.add_argument('--batch_size', default=pr.TRAINING_ARGS['batch_size'], type=int, help="Choosing batch size default is 32")
+parser.add_argument('--initial_learning_rate', default=pr.TRAINING_ARGS['initial_learning_rate'], type=float, help="Choosing initial_learning_rate")
+parser.add_argument('--end_learning_rate', default=pr.TRAINING_ARGS['end_learning_rate'], type=float, help="Choosing end_learning_rate")
+parser.add_argument('--epochs', default=pr.TRAINING_ARGS['epochs'], type=int, help="Choosing epochs")
+parser.add_argument('--test_percentage', default=0.2, type=float, help="Choosing test_percentage")
+parser.add_argument('--pruning_initial_step', default=0.2, type=float, help="Choosing pruning_initial_step")
+parser.add_argument('--initial_sparsity', default=0.40, type=float, help="Choosing initial_sparsity")
+
+args = parser.parse_args()
 
 seed = 42
 os.environ['PYTHONHASHSEED'] = str(seed)
@@ -34,8 +47,8 @@ for filename in os.listdir(train_ds_location):
     file_path = os.path.join(train_ds_location, filename)
     file_paths.append(file_path)
 random.shuffle(file_paths)
-test_percentage = 0.2
-num_test_files = int(len(file_paths) * test_percentage)
+#test_percentage = 0.2
+num_test_files = int(len(file_paths) * args.test_percentage)
 
 train_paths = file_paths[num_test_files:] # it is shuffled, so i can do this
 test_paths = file_paths[:num_test_files]
@@ -47,19 +60,19 @@ train_ds = tf.data.Dataset.list_files(train_paths)
 val_ds = tf.data.Dataset.list_files(eval_ds_location)
 test_ds = tf.data.Dataset.list_files(test_paths)
 
-batch_size = pr.TRAINING_ARGS['batch_size']
-epochs = pr.TRAINING_ARGS['epochs']
+#batch_size = pr.TRAINING_ARGS['batch_size']
+#epochs = pr.TRAINING_ARGS['epochs']
 
-train_ds = train_ds.map(pr.preprocess).batch(batch_size).cache()
-val_ds = val_ds.map(pr.preprocess).batch(batch_size)
-test_ds = test_ds.map(pr.preprocess).batch(batch_size)
+train_ds = train_ds.map(pr.preprocess).batch(args.batch_size).cache()
+val_ds = val_ds.map(pr.preprocess).batch(args.batch_size)
+test_ds = test_ds.map(pr.preprocess).batch(args.batch_size)
 
 for example_batch, example_labels in train_ds.take(1):
   print('Batch Shape:', example_batch.shape)
   print('Data Shape:', example_batch.shape[1:])
   print('Labels:', example_labels)
 
-model_name   = 'model_'+str(batch_size)+'_'+str(pr.alpha)+'.h5'
+model_name   = 'model_'+str(arg.batch_size)+'_'+str(pr.alpha)+'.h5'
 if os.path.exists(log_dir_model+model_name):
     model = tf.keras.models.load_model(log_dir_model+model_name)
     # Continue using loaded_model as usual
@@ -90,12 +103,12 @@ import tensorflow_model_optimization as tfmot
 
 prune_low_magnitude = tfmot.sparsity.keras.prune_low_magnitude
 
-begin_step = int(len(train_ds) * epochs * 0.2)
-end_step = int(len(train_ds) * epochs)
+begin_step = int(len(train_ds) * args.epochs * ags.pruning_initial_step)
+end_step = int(len(train_ds) * args.epochs)
 
 pruning_params = {
     'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(
-        initial_sparsity=0.40,
+        initial_sparsity=args.initial_sparsity,
         final_sparsity=pr.final_sparsity,
         begin_step=begin_step,
         end_step=end_step
@@ -107,13 +120,13 @@ model_for_pruning = prune_low_magnitude(model, **pruning_params)
 #model_for_pruning.summary()
 
 loss = tf.losses.SparseCategoricalCrossentropy(from_logits=False)
-initial_learning_rate = pr.TRAINING_ARGS['initial_learning_rate']
-end_learning_rate = pr.TRAINING_ARGS['end_learning_rate']
+#initial_learning_rate = pr.TRAINING_ARGS['initial_learning_rate']
+#end_learning_rate = pr.TRAINING_ARGS['end_learning_rate']
 
 linear_decay = tf.keras.optimizers.schedules.PolynomialDecay(
-    initial_learning_rate=initial_learning_rate,
-    end_learning_rate=end_learning_rate,
-    decay_steps=len(train_ds) * epochs,
+    initial_learning_rate=args.initial_learning_rate,
+    end_learning_rate=args.end_learning_rate,
+    decay_steps=len(train_ds) * args.epochs,
 )
 optimizer = tf.optimizers.Adam(learning_rate=linear_decay)
 metrics = [tf.metrics.SparseCategoricalAccuracy()]
@@ -130,7 +143,7 @@ callbacks = [ tf.keras.callbacks.ModelCheckpoint(
 
 model_for_pruning.compile(loss=loss, optimizer=optimizer, metrics=metrics)
 
-history = model_for_pruning.fit(train_ds, epochs=epochs, validation_data=test_ds,callbacks=callbacks) #it was valds
+history = model_for_pruning.fit(train_ds, epochs=args.epochs, validation_data=test_ds,callbacks=callbacks) #it was valds
 # history = model_for_pruning.fit(train_ds, epochs=epochs, callbacks=callbacks) #it was valds
 
 
