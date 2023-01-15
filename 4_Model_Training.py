@@ -16,6 +16,7 @@ parser.add_argument('--epochs', default=pr.TRAINING_ARGS['epochs'], type=int, he
 parser.add_argument('--test_percentage', default=0.2, type=float, help="Choosing test_percentage")
 parser.add_argument('--pruning_initial_step', default=0.2, type=float, help="Choosing pruning_initial_step")
 parser.add_argument('--initial_sparsity', default=0.40, type=float, help="Choosing initial_sparsity")
+parser.add_argument('--alpha', default=pr.alpha, type=float, help="Choosing alpha")
 
 args = parser.parse_args()
 
@@ -72,22 +73,22 @@ for example_batch, example_labels in train_ds.take(1):
   print('Data Shape:', example_batch.shape[1:])
   print('Labels:', example_labels)
 
-model_name   = 'model_'+str(arg.batch_size)+'_'+str(pr.alpha)+'.h5'
+model_name   = 'model_'+str(arg.batch_size)+'_'+str(args.alpha)+'.h5'
 if os.path.exists(log_dir_model+model_name):
     model = tf.keras.models.load_model(log_dir_model+model_name)
     # Continue using loaded_model as usual
 else:
     model = tf.keras.Sequential([
     tf.keras.layers.Input(shape=example_batch.shape[1:]),
-    tf.keras.layers.Conv2D(filters=int(128 * pr.alpha), kernel_size=[3, 3], strides=[2, 2],
+    tf.keras.layers.Conv2D(filters=int(128 * args.alpha), kernel_size=[3, 3], strides=[2, 2],
         use_bias=False, padding='valid'),
     tf.keras.layers.BatchNormalization(),
     tf.keras.layers.ReLU(),
-    tf.keras.layers.Conv2D(filters=int(128 * pr.alpha), kernel_size=[3, 3], strides=[1, 1],
+    tf.keras.layers.Conv2D(filters=int(128 * args.alpha), kernel_size=[3, 3], strides=[1, 1],
             use_bias=False, padding='same'),
     tf.keras.layers.BatchNormalization(),
     tf.keras.layers.ReLU(),
-    tf.keras.layers.Conv2D(filters=int(128 * pr.alpha), kernel_size=[3, 3], strides=[1, 1],
+    tf.keras.layers.Conv2D(filters=int(128 * args.alpha), kernel_size=[3, 3], strides=[1, 1],
         use_bias=False, padding='same'),
     tf.keras.layers.BatchNormalization(),
     tf.keras.layers.ReLU(),
