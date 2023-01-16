@@ -1,7 +1,7 @@
 import tensorflow as tf
 import tensorflow_io as tfio
 import numpy as np
-LABELS = ['change languagenone', 'activatemusic', 'deactivatelights', 'increasevolume', 'decreasevolume', 'increaseheat', 'decreaseheat']
+LABELS = ['change languagenone', 'activatemusic', 'deactivatelights', 'increasevolume', 'decreasevolume', 'increaseheat', 'decreaseheat', 'nannan']
 # This is the file genarated that has the Labels that i must use for training
  
 frame_length_in_s = 0.032
