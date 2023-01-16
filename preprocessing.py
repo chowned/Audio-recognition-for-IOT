@@ -38,7 +38,9 @@ PREPROCESSING_ARGS = {
 downsampling_rate = PREPROCESSING_ARGS['downsampling_rate']
 sampling_rate_int64 = tf.cast(downsampling_rate, tf.int64)
 frame_length = int(downsampling_rate * PREPROCESSING_ARGS['frame_length_in_s'])
+print("Frame_length: {}".format(frame_length))
 frame_step = int(downsampling_rate * PREPROCESSING_ARGS['frame_step_in_s'])
+print("Frame_length: {}".format(frame_step))
 num_spectrogram_bins = frame_length // 2 + 1
 num_mel_bins = PREPROCESSING_ARGS['num_mel_bins']
 lower_frequency = PREPROCESSING_ARGS['lower_frequency']
@@ -60,19 +62,9 @@ def preprocess(filename):
     file_parts = tf.strings.split(path_end, '.')
     true_label = file_parts[0]
     label_id = tf.argmax(true_label == LABELS)
-
     audio, sampling_rate = tf.audio.decode_wav(audio_binary)
-
     audio = tf.squeeze(audio, axis=-1) #all our audio are mono, drop extra axis
-
-    # print("Audio",tf.shape(audio))
-
-    
-    
-    
-
     audio_padded = audio
-
     stft = tf.signal.stft(
         audio,
         frame_length=frame_length,
