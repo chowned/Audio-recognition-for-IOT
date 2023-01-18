@@ -5,7 +5,8 @@ LABELS = ['change languagenone', 'activatemusic', 'deactivatelights', 'increasev
 # This is the file genarated that has the Labels that i must use for training
  
 frame_length_in_s = 0.032
-frame_step_in_s  = 0.032
+frame_step_in_s   = 0.032
+length_calculated = 2
 
 
 PREPROCESSING_ARGS = {
