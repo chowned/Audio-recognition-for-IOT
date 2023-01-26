@@ -459,7 +459,7 @@ metrics = [tf.metrics.SparseCategoricalAccuracy()]
 tensorboard_model_saved = f"run_{tb_run}"
 
 
-my_callback = MyThresholdCallback(threshold=0.90)
+my_callback = MyThresholdCallback(threshold=0.92)
 
 callbacks = [ tf.keras.callbacks.ModelCheckpoint(filepath=log_dir_tensorboard+model_name+'.ckpt',save_weights_only=True,verbose=1),
              tfmot.sparsity.keras.UpdatePruningStep(), 
