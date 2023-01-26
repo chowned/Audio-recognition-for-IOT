@@ -1,2 +1,11 @@
 
 *.wav
+datasets/dsl_data/models/frame_l_0.064_epochs_200_batch_size_32_pruning_initial_step_0.9_initial_learning_rate_0.01_end_learning_rate_0.005_test_percentage_0.2_pruning_initial_step_0.9_initial_sparsity_0.4_alpha_0.25.txt
+*.zip
+*.csv
+*.pb
+*.data-00000-of-00001
+*.index
+*.v2
+*.txt
+datasets/dsl_data/tensorboard_data/checkpoint
