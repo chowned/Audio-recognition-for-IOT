@@ -1,18 +1,6 @@
-# -*- coding: utf-8 -*-
-
 """# Necessary install of dep and import libraries
 This installs on the google colab server the necessary libraries
 """
-
-#!pip install git > /dev/null
-#!rm ./requiremen*
-#!rm ./preprocessing*
-#!ls
-# !pip install -r ipython psutil==5.9.2 sounddevice==0.4.5 scipy==1.9.1 redis==4.3.4 tensorflow==2.10.0 tensorflow-io==0.27.0 cherrypy==18.8.0 paho-mqtt==1.6.1 > /dev/null
-# !pip install -r librosa tensorflow_model_optimization pandas keras tensorflow_io > /dev/null
-# !pip install tensorflow[io] > /dev/null
-# !pip install tensorflow_model_optimization > /dev/null
-# !pip install pydub
 
 import pandas as pd
 import os
@@ -34,11 +22,11 @@ from tensorboard.plugins.hparams import api as hp
 This code begins as a simple python script. Then we moved to jupyter. Jupyter doesn't support the argument parser, but it is still good to have in case in the future we want to run it as a script.
 """
 new_sr=8000
-folder_path = './audio'
 LABELS = []
 num_units = 512
 
 os.chdir('./datasets/dsl_data/')
+folder_path = './audio'
 
 parser = ap.ArgumentParser()
 
@@ -47,16 +35,15 @@ parser.add_argument('--initial_learning_rate', default=0.03, type=float, help="C
 parser.add_argument('--end_learning_rate', default=0.001, type=float, help="Choosing end_learning_rate")
 parser.add_argument('--epochs', default=50, type=int, help="Choosing epochs")
 parser.add_argument('--test_percentage', default=0.20, type=float, help="Choosing test_percentage")
-parser.add_argument('--pruning_initial_step', default=0.2, type=float, help="Choosing pruning_initial_step")
-parser.add_argument('--initial_sparsity', default=0.40, type=float, help="Choosing initial_sparsity")
+# parser.add_argument('--pruning_initial_step', default=0.2, type=float, help="Choosing pruning_initial_step")
+# parser.add_argument('--initial_sparsity', default=0.40, type=float, help="Choosing initial_sparsity")
 parser.add_argument('--alpha', default=1, type=float, help="Choosing alpha")
-
 parser.add_argument('--eval_percentage', default=0.0, type=float, help="Choosing eval_percentage")
 #,'--eval_percentage','0.0'
 
 """Parser arguments"""
 
-args = parser.parse_args(['--epochs','200','--alpha','0.5','--batch_size','32','--pruning_initial_step','0.9','--initial_learning_rate','0.01','--end_learning_rate','0.005'])
+args = parser.parse_args(['--epochs','200','--alpha','0.5','--batch_size','32','--initial_learning_rate','0.01','--end_learning_rate','0.005'])
 # args = parser.parse_args()
 
 """# Preprocessing HP
@@ -111,7 +98,6 @@ def preprocess(filename):
     label_id = tf.argmax(true_label == LABELS)
     audio, sampling_rate = tf.audio.decode_wav(audio_binary)
     audio = tf.squeeze(audio, axis=-1) #all our audio are mono, drop extra axis
-    audio_padded = audio
     stft = tf.signal.stft(
         audio,
         frame_length=frame_length,
@@ -144,7 +130,7 @@ class MyThresholdCallback(tf.keras.callbacks.Callback):
             self.model.stop_training = True
 
 
-def scan_folder(folder):
+def scan_folder(folder): # find audio length
   duration_count = {}
   for root, dirs, files in os.walk(folder):
     for file in files:
@@ -165,10 +151,9 @@ def create_dataframe(duration_count):
   df = df.sort_values(by='Number of audio files with that duration', ascending=False)
   return df
 
-
 # find the percentage. The duration returned in second is the size that include 1-percentage inside
 
-def find_duration(folder_path, percentage_files=0.93):
+def find_duration(folder_path, percentage_files=0.90):
   duration_count = {}
   for root, dirs, files in os.walk(folder_path):
     for file in files:
@@ -191,17 +176,17 @@ def find_duration(folder_path, percentage_files=0.93):
         print(f"Duration of audio that makes {percentage_files*100}% of the files have that duration is: {duration} seconds")
         return duration
     
+""" Start to create the audio files that i will work with """
 # process_file better to be implemented here with a boolean value that checks if i am processing train_dataset or eval file
 def process_file(file_path, flag):
     file_path_exists = df[df["path"] == file_path].shape[0] > 0 #flag
     if file_path_exists:
-        # new_sr=16000
         # identifier care
         identifier = df.loc[df["path"] == file_path, "Id"].values[0]
         identifier = str(int(identifier))
         # label constructor
         label = ""
-        if flag == 1:
+        if flag == 1: # it means i am using development.csv
             label  += "_"
             action  = df.loc[df["path"] == file_path, "action"].values[0]
             object  = df.loc[df["path"] == file_path, "object"].values[0]
@@ -218,8 +203,7 @@ def process_file(file_path, flag):
         y_truncated = librosa.util.fix_length(data=y_truncated, size=target_length) # padding, if shorter
         sf.write(new_file_path, y_truncated, new_sr, 'PCM_16')
 
-duration = find_duration(folder_path)
-length_calculated = duration
+length_calculated = find_duration(folder_path)
 
 
 
@@ -250,17 +234,10 @@ if not os.listdir(new_folder_path):
     for dirpath, dirnames, filenames in os.walk(folder_path):
       dirpath = dirpath.replace("\\", "/")
       dirpath = dirpath[dirpath.index("/")+1:] 
-      #dirpath = dirpath[dirpath.index("/")+1:] 
-      #print(dirpath)
-      #dirpath = dirpath[dirpath.index("/")+1:]
-      #print(dirpath)
       for filename in filenames:
         file_path = os.path.join(dirpath, filename)
         file_path = file_path.replace("\\", "/")
         executor.submit(process_file, file_path, 1)
-# print(df)
-#print("Execution ended")
-#rint(file_path)
 
 """ # Preprocessing for Evaluation dataset files
  The same as before but for the evaluation dataset to send
@@ -278,16 +255,10 @@ if not os.listdir(new_folder_path):
         for dirpath, dirnames, filenames in os.walk(folder_path):
             dirpath = dirpath.replace("\\", "/")
             dirpath = dirpath[dirpath.index("/")+1:]
-            dirpath = dirpath
-            #dirpath = dirpath[dirpath.index("/")+1:]
-            # print(dirpath)
-            #dirpath = dirpath[dirpath.index("/")+1:]
             for filename in filenames:
                 file_path = os.path.join(dirpath, filename)
                 file_path = file_path.replace("\\", "/")
                 executor.submit(process_file, file_path, 0)
-
-# print("Execution ended")
 
 
 
@@ -301,9 +272,6 @@ distinct_values = df['labels'].unique()
 
 LABELS = distinct_values.tolist()
 # print("Labels to predict: ",LABELS)
-
-
-
 
 """## This part of the code exist to manage all the folders
 ## Please be careful, if the directories tree is not respected, the code will not work properly
@@ -330,10 +298,8 @@ tb_run = max(runs) + 1 if runs else 0
 # Folder creation
 train_ds_location      = './Train_Dataset_Truncated/'
 log_dir_model          = './models/'
-#run_{}_
-model_name             = 'frame_l_{}_epochs_{}_batch_size_{}_pruning_initial_step_{}_initial_learning_rate_{}_end_learning_rate_{}_test_percentage_{}_pruning_initial_step_{}_initial_sparsity_{}_alpha_{}'.format(frame_length_in_s,args.epochs,args.batch_size,args.pruning_initial_step,args.initial_learning_rate,args.end_learning_rate,args.test_percentage,args.pruning_initial_step,args.initial_sparsity,args.alpha)
+model_name             = 'frame_l_{}_epochs_{}_batch_size_{}_initial_learning_rate_{}_end_learning_rate_{}_test_percentage_{}_alpha_{}'.format(frame_length_in_s,args.epochs,args.batch_size,args.initial_learning_rate,args.end_learning_rate,args.test_percentage,args.alpha)
 checkpoint_path        = './checkpoints/' + model_name
-#check_point_file_name  = checkpoint_path+'.ckpt'
 
 # If folders to not exist -> create them
 # This code will not check for the dataset folders, the code above must be executed
@@ -356,9 +322,6 @@ random.shuffle(file_paths)
 num_test_files = int(len(file_paths) * args.test_percentage)
 num_eval_files = int(len(file_paths) * args.eval_percentage)
 #not using eval dataset
-
-
-# num_eval_files = num_eval_files
 
 # it is shuffled, so i can do this
 test_paths     = file_paths[:num_test_files]                 # from 0 to num_test_files
@@ -384,22 +347,6 @@ for example_batch, example_labels in train_ds.take(1):
   print('Batch Shape:', example_batch.shape)
   print('Data Shape:', example_batch.shape[1:])
   print('Labels:', example_labels)
-
-# prune_low_magnitude = tfmot.sparsity.keras.prune_low_magnitude
-# begin_step          = int(len(train_ds) * args.epochs * args.pruning_initial_step)
-# end_step            = int(len(train_ds) * args.epochs)
-# pruning_params      = {
-#     'pruning_schedule': tfmot.sparsity.keras.PolynomialDecay(
-#         initial_sparsity=args.initial_sparsity,
-#         final_sparsity=final_sparsity,
-#         begin_step=begin_step,
-#         end_step=end_step
-#     )
-# }
-# custom_objects      = {'PruneLowMagnitude': prune_low_magnitude}
-
-# model_name          = 'model_'+str(args.batch_size)+'_'+str(args.alpha)
-# model_name += '.h5'
 
 hparams = {
 'num_units' : num_units,
@@ -430,20 +377,7 @@ model = tf.keras.Sequential([
 
 #example_batch = example_batch.reshape(-1, example_batch.shape[1:])
 #example_batch = np.concatenate([example_batch, example_batch, example_batch], axis=-1)
-#model = tf.keras.applications.resnet50.ResNet50(weights='imagenet', include_top=False, input_shape=(example_batch.shape[1],example_batch.shape[2],example_batch.shape[3]))
-
-
-# model_for_pruning = prune_low_magnitude(model, **pruning_params)
-
-# print('Batch Shape:', example_batch.shape)
-# print('Data Shape:', example_batch.shape[1])
-# print('Data Shape:', example_batch.shape[2])
-# print('Data Shape:', example_batch.shape[3])
-# print('Labels:', example_labels)
-
-# this model uses Transfer Learning... I mean, we transferred a model developed for another course to this course
-# print(example_batch.shape[1:])
-# model_for_pruning.summary()
+#model         = tf.keras.applications.resnet50.ResNet50(weights='imagenet', include_top=False, input_shape=(example_batch.shape[1],example_batch.shape[2],example_batch.shape[3]))
 
 """# Model fitting"""
 
@@ -461,8 +395,8 @@ tensorboard_model_saved = f"run_{tb_run}"
 
 my_callback = MyThresholdCallback(threshold=0.90)
 
-callbacks = [ tf.keras.callbacks.ModelCheckpoint(filepath=log_dir_tensorboard+model_name+'.ckpt',save_weights_only=True,verbose=1),
-             tfmot.sparsity.keras.UpdatePruningStep(), 
+callbacks = [ tf.keras.callbacks.ModelCheckpoint(filepath=log_dir_tensorboard+tensorboard_model_saved+'.ckpt',save_weights_only=True,verbose=1),
+            #  tfmot.sparsity.keras.UpdatePruningStep(), 
              keras.callbacks.TensorBoard(log_dir=log_dir_tensorboard+tensorboard_model_saved, histogram_freq=1) , 
              hp.KerasCallback(log_dir_tensorboard+tensorboard_model_saved, hparams),# val_accuracy
              #tf.keras.callbacks.EarlyStopping(monitor='sparse_categorical_accuracy', mode='max', patience=10, min_delta=2.0, restore_best_weights=True, verbose=1, baseline=0.985),
@@ -472,10 +406,10 @@ callbacks = [ tf.keras.callbacks.ModelCheckpoint(filepath=log_dir_tensorboard+mo
 
 model.compile(loss=loss, optimizer=optimizer, metrics=metrics)
 
-if os.path.exists(log_dir_tensorboard+model_name+'.ckpt'):
+if os.path.exists(log_dir_tensorboard+tensorboard_model_saved+'.ckpt'):
     print("Checkpoint found, loading...")
-    model.load_weights(log_dir_tensorboard+model_name+'.ckpt')
-    with open(log_dir_tensorboard+model_name+"epochs.txt", "r") as file:
+    model.load_weights(log_dir_tensorboard+tensorboard_model_saved+'.ckpt')
+    with open(log_dir_tensorboard+tensorboard_model_saved+"epochs.txt", "r") as file:
         contents = file.read()
         previous_epoch_run = int(contents)
         previous_epoch_run = previous_epoch_run
@@ -487,9 +421,6 @@ else:
 #validation data is test_ds validation_data=val_ds,
     
 history = model.fit(train_ds, validation_data=test_ds, epochs=args.epochs, callbacks=callbacks,verbose=1,initial_epoch=previous_epoch_run) #it was valds
-
-with open(log_dir_tensorboard+model_name+"epochs.txt", "w") as file:
-    file.write(str(args.epochs))
 
 """# Evaluation on created eval Dataset"""
 
@@ -511,33 +442,6 @@ print()
 print(f'Test Loss: {test_loss:.4f}')
 print(f'Test Accuracy: {test_accuracy*100.:.2f}%')
 
-with open(log_dir_model+model_name+".txt", "w") as file:
-    file.write(model_name)
-    file.write("\n")
-    file.write("Frame length =  {}".format(frame_length_in_s))
-    file.write("\n")
-    file.write("Execution lasted: " + str(args.epochs))
-    file.write("\n")
-    file.write(f'\nTraining Loss: {training_loss:.4f}')
-    file.write(f'\nTraining Accuracy: {training_accuracy*100.:.2f}%')
-    file.write("\n")
-    file.write(f'\nValidation Loss: {val_loss:.4f}')
-    file.write(f'\nValidation Accuracy: {val_accuracy*100.:.2f}%')
-    file.write("\n")
-    file.write(f'\nTest Loss: {test_loss:.4f}')
-    file.write(f'\nTest Accuracy: {test_accuracy*100.:.2f}%')
-    
-saved_model_dir = f'./saved_models/last_model_used'
-if not os.path.exists(saved_model_dir):
-    os.makedirs(saved_model_dir)
-model.save(saved_model_dir)
-
-print(log_dir_model+model_name)
-print("run: ",tb_run)
-with open(log_dir_model+model_name+".txt", "r") as file:
-        contents = file.read()
-        print(contents)
-
 """# Evaluation of submitted data"""
 
 from glob import glob
@@ -554,7 +458,7 @@ with open(f"Evaluation_Dataset_Result_{tb_run}.csv", "w") as file:
         audio_binary = tf.io.read_file(filename)
         audio, sampling_rate = tf.audio.decode_wav(audio_binary)
         audio = tf.squeeze(audio, axis=-1) #all our audio are mono, drop extra axis
-        audio_padded = audio
+        # audio_padded = audio
         stft = tf.signal.stft(
             audio,
             frame_length=frame_length,
