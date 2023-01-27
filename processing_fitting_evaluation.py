@@ -31,9 +31,9 @@ folder_path = './audio'
 parser = ap.ArgumentParser()
 
 parser.add_argument('--batch_size', default=32, type=int, help="Choosing batch size default is 32")
-parser.add_argument('--initial_learning_rate', default=0.03, type=float, help="Choosing initial_learning_rate")
-parser.add_argument('--end_learning_rate', default=0.001, type=float, help="Choosing end_learning_rate")
-parser.add_argument('--epochs', default=50, type=int, help="Choosing epochs")
+parser.add_argument('--initial_learning_rate', default=0.01, type=float, help="Choosing initial_learning_rate")
+parser.add_argument('--end_learning_rate', default=0.005, type=float, help="Choosing end_learning_rate")
+parser.add_argument('--epochs', default=200, type=int, help="Choosing epochs")
 parser.add_argument('--test_percentage', default=0.20, type=float, help="Choosing test_percentage")
 # parser.add_argument('--pruning_initial_step', default=0.2, type=float, help="Choosing pruning_initial_step")
 # parser.add_argument('--initial_sparsity', default=0.40, type=float, help="Choosing initial_sparsity")
@@ -43,8 +43,8 @@ parser.add_argument('--eval_percentage', default=0.0, type=float, help="Choosing
 
 """Parser arguments"""
 
-args = parser.parse_args(['--epochs','200','--alpha','0.5','--batch_size','32','--initial_learning_rate','0.01','--end_learning_rate','0.005'])
-# args = parser.parse_args()
+# args = parser.parse_args(['--alpha','1.0','--batch_size','64'])
+args = parser.parse_args()
 
 """# Preprocessing HP
 These HP are responsible for the mel bins. frame_length_in_s is one of the most important
@@ -65,8 +65,8 @@ num_mel_bins = (int) ((new_sr - new_sr * PREPROCESSING_ARGS['frame_length_in_s']
 PREPROCESSING_ARGS = {
     **PREPROCESSING_ARGS,
     'num_mel_bins': num_mel_bins,
-    'lower_frequency': 40,
-    'upper_frequency': 4000,
+    'lower_frequency': 20,   #40
+    'upper_frequency': new_sr/2, #4000
 }
 
 downsampling_rate = PREPROCESSING_ARGS['downsampling_rate']
@@ -126,6 +126,16 @@ class MyThresholdCallback(tf.keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs=None): 
         val_acc = logs["val_sparse_categorical_accuracy"]
+        if val_acc >= self.threshold:
+            self.model.stop_training = True
+
+class MyThresholdCallbackTrain(tf.keras.callbacks.Callback):
+    def __init__(self, threshold):
+        super(MyThresholdCallbackTrain, self).__init__()
+        self.threshold = threshold
+
+    def on_epoch_end(self, epoch, logs=None): 
+        val_acc = logs["sparse_categorical_accuracy"]
         if val_acc >= self.threshold:
             self.model.stop_training = True
 
@@ -298,7 +308,7 @@ tb_run = max(runs) + 1 if runs else 0
 # Folder creation
 train_ds_location      = './Train_Dataset_Truncated/'
 log_dir_model          = './models/'
-model_name             = 'frame_l_{}_epochs_{}_batch_size_{}_initial_learning_rate_{}_end_learning_rate_{}_test_percentage_{}_alpha_{}'.format(frame_length_in_s,args.epochs,args.batch_size,args.initial_learning_rate,args.end_learning_rate,args.test_percentage,args.alpha)
+model_name             = 'tb_run_{}_frame_l_{}_epochs_{}_batch_size_{}_initial_learning_rate_{}_end_learning_rate_{}_test_percentage_{}_alpha_{}'.format(tb_run,frame_length_in_s,args.epochs,args.batch_size,args.initial_learning_rate,args.end_learning_rate,args.test_percentage,args.alpha)
 checkpoint_path        = './checkpoints/' + model_name
 
 # If folders to not exist -> create them
@@ -397,27 +407,29 @@ metrics = [tf.metrics.SparseCategoricalAccuracy()]
 tensorboard_model_saved = f"run_{tb_run}"
 
 
-my_callback = MyThresholdCallback(threshold=0.90)
+my_callback_val   = MyThresholdCallback(threshold=0.95)
+my_callback_train = MyThresholdCallbackTrain(threshold=1.0)
 
-callbacks = [ tf.keras.callbacks.ModelCheckpoint(filepath=log_dir_tensorboard+tensorboard_model_saved+'.ckpt',save_weights_only=True,verbose=1),
+callbacks = [ tf.keras.callbacks.ModelCheckpoint(filepath=log_dir_model+model_name+'.ckpt',save_weights_only=True,verbose=1),
             #  tfmot.sparsity.keras.UpdatePruningStep(), 
              keras.callbacks.TensorBoard(log_dir=log_dir_tensorboard+tensorboard_model_saved, histogram_freq=1) , 
              hp.KerasCallback(log_dir_tensorboard+tensorboard_model_saved, hparams),# val_accuracy
              #tf.keras.callbacks.EarlyStopping(monitor='sparse_categorical_accuracy', mode='max', patience=10, min_delta=2.0, restore_best_weights=True, verbose=1, baseline=0.985),
-             my_callback,
+            #  my_callback_val, 
+             my_callback_train,
              ]
 
 
 model.compile(loss=loss, optimizer=optimizer, metrics=metrics)
 
-if os.path.exists(log_dir_tensorboard+tensorboard_model_saved+'.ckpt'):
+if os.path.exists(log_dir_model+model_name+'.ckpt'):
     print("Checkpoint found, loading...")
-    model.load_weights(log_dir_tensorboard+tensorboard_model_saved+'.ckpt')
-    with open(log_dir_tensorboard+tensorboard_model_saved+"epochs.txt", "r") as file:
-        contents = file.read()
-        previous_epoch_run = int(contents)
-        previous_epoch_run = previous_epoch_run
-    print("Restoring from epoch : {}".format(previous_epoch_run))
+    model.load_weights(log_dir_model+model_name+'.ckpt')
+    # with open(log_dir_model+model_name+"epochs.txt", "r") as file:
+    #     contents = file.read()
+    #     previous_epoch_run = int(contents)
+    #     previous_epoch_run = previous_epoch_run
+    # print("Restoring from epoch : {}".format(previous_epoch_run))
 else:
     print("No previous check_point found.")
     previous_epoch_run = 0
