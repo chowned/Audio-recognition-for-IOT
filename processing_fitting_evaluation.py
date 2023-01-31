@@ -43,7 +43,7 @@ parser.add_argument('--eval_percentage', default=0.0, type=float, help="Choosing
 
 """Parser arguments"""
 
-# args = parser.parse_args(['--alpha','1.0','--batch_size','64'])
+# args = parser.parse_args(['--alpha','1.0'])
 args = parser.parse_args()
 
 """# Preprocessing HP
@@ -51,7 +51,7 @@ These HP are responsible for the mel bins. frame_length_in_s is one of the most 
 """
 
 frame_length_in_s = 0.032*2 # /2 for resnet18
-frame_step_in_s  = frame_length_in_s
+frame_step_in_s  = frame_length_in_s#frame_length_in_s
 
 PREPROCESSING_ARGS = {
     'downsampling_rate': new_sr,
@@ -354,7 +354,6 @@ val_ds         = val_ds.map(preprocess).batch(args.batch_size)
 test_ds        = test_ds.map(preprocess).batch(args.batch_size)
 
 for example_batch, example_labels in train_ds.take(1):
-  print('Batch Shape:', example_batch.shape)
   print('Data Shape:', example_batch.shape[1:])
   print('Labels:', example_labels)
 
@@ -369,19 +368,19 @@ hparams = {
 model = tf.keras.Sequential([
     tf.keras.layers.Input(shape=example_batch.shape[1:]),
     tf.keras.layers.Conv2D(filters=int(num_units * args.alpha), kernel_size=[3, 3], strides=[2, 2],
-        use_bias=False, padding='valid'),
+        use_bias=False, padding='valid', kernel_initializer='glorot_normal'),
     tf.keras.layers.BatchNormalization(),
     tf.keras.layers.ReLU(),
     tf.keras.layers.DepthwiseConv2D(kernel_size=[3, 3], strides=[1, 1], 
-        use_bias=False, padding='same'),
+        use_bias=False, padding='same', kernel_initializer='glorot_normal'),
     tf.keras.layers.Conv2D(filters=int(num_units * args.alpha), kernel_size=[3, 3], strides=[1, 1],
-            use_bias=False, padding='same'),
+            use_bias=False, padding='same', kernel_initializer='glorot_normal'),
     tf.keras.layers.BatchNormalization(),
     tf.keras.layers.ReLU(),
     tf.keras.layers.DepthwiseConv2D(kernel_size=[3, 3], strides=[1, 1], 
-        use_bias=False, padding='same'),
+        use_bias=False, padding='same', kernel_initializer='glorot_normal'),
     tf.keras.layers.Conv2D(filters=int(num_units * args.alpha), kernel_size=[3, 3], strides=[1, 1],
-        use_bias=False, padding='same'),
+        use_bias=False, padding='same', kernel_initializer='glorot_normal'),
     tf.keras.layers.BatchNormalization(),
     tf.keras.layers.ReLU(),
     tf.keras.layers.GlobalAveragePooling2D(),
@@ -393,7 +392,8 @@ model = tf.keras.Sequential([
 #example_batch = np.concatenate([example_batch, example_batch, example_batch], axis=-1)
 #model         = tf.keras.applications.resnet50.ResNet50(weights='imagenet', include_top=False, input_shape=(example_batch.shape[1],example_batch.shape[2],example_batch.shape[3]))
 
-"""# Model fitting"""
+# """# Model fitting"""
+# model.summary()
 
 loss = tf.losses.SparseCategoricalCrossentropy(from_logits=False)
 
@@ -408,7 +408,7 @@ tensorboard_model_saved = f"run_{tb_run}"
 
 
 my_callback_val   = MyThresholdCallback(threshold=0.95)
-my_callback_train = MyThresholdCallbackTrain(threshold=1.0)
+my_callback_train = MyThresholdCallbackTrain(threshold=0.999)
 
 callbacks = [ tf.keras.callbacks.ModelCheckpoint(filepath=log_dir_model+model_name+'.ckpt',save_weights_only=True,verbose=1),
             #  tfmot.sparsity.keras.UpdatePruningStep(), 
