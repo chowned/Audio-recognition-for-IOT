@@ -50,7 +50,7 @@ args = parser.parse_args()
 These HP are responsible for the mel bins. frame_length_in_s is one of the most important
 """
 
-frame_length_in_s = 0.032*2 # /2 for resnet18
+frame_length_in_s = 0.04#0.032*2 # /2 for resnet18
 frame_step_in_s  = frame_length_in_s#frame_length_in_s
 
 PREPROCESSING_ARGS = {
@@ -495,3 +495,45 @@ with open(f"Evaluation_Dataset_Result_{tb_run}.csv", "w") as file:
         
         #print(prediction)
         file.write("\n{},{}".format(identifier,prediction))
+
+
+""" 
+    This part is used to save the model and convert to tensorflow lite
+"""
+
+from time import time
+
+timestamp = int(time())
+modelName = f'model_{tb_run}'
+
+saved_model_dir = f'./saved_models/{modelName}'
+if not os.path.exists(saved_model_dir):
+    os.makedirs(saved_model_dir)
+model.save(saved_model_dir)
+
+"""
+    TF Convert
+"""
+
+
+converter = tf.lite.TFLiteConverter.from_saved_model(f'./saved_models/{modelName}')
+tflite_model = converter.convert()
+tflite_models_dir = './tflite_models'
+if not os.path.exists(tflite_models_dir):
+    os.makedirs(tflite_models_dir)
+tflite_model_name = os.path.join(tflite_models_dir, f'{modelName}.tflite')
+# tflite_model_name
+with open(tflite_model_name, 'wb') as fp:
+    fp.write(tflite_model)
+
+import zipfile
+
+with zipfile.ZipFile(f'{tflite_model_name}.zip', 'w', compression=zipfile.ZIP_DEFLATED) as f:
+    f.write(tflite_model_name)
+
+pruned_tflite_size = os.path.getsize(tflite_model_name) / 1024
+pruned_zip_size = os.path.getsize(f'{tflite_model_name}.zip') / 1024
+
+print(f'Original TFLite Size (pruned model): {pruned_tflite_size:.2f} KB')
+print(f'ZIP TFLite Size (pruned model): {pruned_zip_size:.2f} KB')
+
