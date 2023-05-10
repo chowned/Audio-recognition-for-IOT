@@ -20,6 +20,8 @@ import paho.mqtt.client as mqtt
 import noisereduce as nr
 from scipy.io import wavfile
 
+os.chdir('../') #DELETE BEFORE SEND TO PROFESSOR
+
 
 try:
     os.chdir('./datasets/dsl_data/')
