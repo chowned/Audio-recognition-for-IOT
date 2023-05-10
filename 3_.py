@@ -13,10 +13,10 @@ myTopic = mtd.returnTopic()
 here connect to redis, create timeseries
 """
 
-REDIS_HOST = 'redis-14094.c300.eu-central-1-1.ec2.cloud.redislabs.com'
-REDIS_PORT = 14094
-REDIS_USERNAME = 'default'
-REDIS_PASSWORD = 'pbkDvCWQpiGxyG2FwKt3aleh7l5vOTnz'
+REDIS_HOST = '****'
+REDIS_PORT = 152
+REDIS_USERNAME = '***'
+REDIS_PASSWORD = '*******'
 timeseries_name = "AudioIOT"
 
 redis_client = redis.Redis(
