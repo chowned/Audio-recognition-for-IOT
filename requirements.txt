@@ -7,9 +7,9 @@ tensorflow==2.10.0
 tensorflow-io==0.27.0
 cherrypy==18.8.0
 paho-mqtt==1.6.1
-redis==4.3.4
 librosa
 tensorflow_model_optimization
 pandas
 keras
 pydub
+noisereduce
