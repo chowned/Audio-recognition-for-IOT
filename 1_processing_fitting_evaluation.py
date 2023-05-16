@@ -393,7 +393,7 @@ model = tf.keras.Sequential([
 #model         = tf.keras.applications.resnet50.ResNet50(weights='imagenet', include_top=False, input_shape=(example_batch.shape[1],example_batch.shape[2],example_batch.shape[3]))
 
 # """# Model fitting"""
-# model.summary()
+model.summary()
 
 loss = tf.losses.SparseCategoricalCrossentropy(from_logits=False)
 
