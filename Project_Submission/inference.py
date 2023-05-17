@@ -20,6 +20,7 @@ import noisereduce as nr
 from scipy.io.wavfile import write
 from scipy.io import wavfile
 import paho.mqtt.client as mqtt
+import sys
 
 import uuid
 mac_address = hex(uuid.getnode())
@@ -106,7 +107,13 @@ output_details = interpreter.get_output_details()
 
 mqtt_topic = "topic/ML4IOT_Project_Polito"
 client = mqtt.Client()
-client.connect("test.mosquitto.org",1883,60)
+
+def connect_mqtt():
+    try:
+        client.connect("test.mosquitto.org",1883,60)
+    except:
+        print("I cannot connect to the mqtt client")
+        sys.exit(0)
 
 def get_audio_from_numpy(indata):
     indata = tf.convert_to_tensor(indata, dtype=tf.float32)
@@ -161,8 +168,8 @@ def send_prediction_as_mqtt(predicted_label):
 def prediction_on_indata(filename):
     
     print("Prediction for",filename)
-    frame_length_in_s = 0.04
-    frame_step_in_s   = frame_length_in_s
+    # frame_length_in_s = 0.04
+    # frame_step_in_s   = frame_length_in_s
     audio_binary = tf.io.read_file(filename)
     audio, sampling_rate = tf.audio.decode_wav(audio_binary)
     audio = tf.squeeze(audio, axis=-1) #all our audio are mono, drop extra axis
@@ -188,8 +195,8 @@ def prediction_on_indata(filename):
     log_mel_spectrogram = tf.expand_dims(log_mel_spectrogram, 0)  # batch axis
     log_mel_spectrogram = tf.expand_dims(log_mel_spectrogram, -1)  # channel axis
     mfcss = tf.signal.mfccs_from_log_mel_spectrograms(log_mel_spectrogram)
-    #print("Shape ",input_details[0])
-    interpreter.set_tensor(input_details[0]['index'], mfcss)
+    # print("Shape ",input_details[0])
+    interpreter.set_tensor(input_details[0]['index'], mfcss) # input_details[0]['index']
     interpreter.invoke()
     output = interpreter.get_tensor(output_details[0]['index'])
 
@@ -256,4 +263,5 @@ def main():
             print("Talk, i am hearing") # to print a new line, improving readability in the terminal
 
 if __name__ == '__main__':
+    connect_mqtt()
     main()
