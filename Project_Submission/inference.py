@@ -25,7 +25,7 @@ import sys
 import uuid
 mac_address = hex(uuid.getnode())
 
-os.chdir('../') #DELETE BEFORE SEND TO PROFESSOR
+os.chdir('./') 
 
 
 try:
@@ -100,7 +100,7 @@ linear_to_mel_weight_matrix = tf.signal.linear_to_mel_weight_matrix(
 
 modelName = "model_24"
 
-interpreter = tf.lite.Interpreter(model_path=f'./tflite_models/{modelName}.tflite')
+interpreter = tf.lite.Interpreter(model_path=f'./{modelName}.tflite')
 interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
